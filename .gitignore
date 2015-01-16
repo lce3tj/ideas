@@ -1,0 +1,199 @@
+ULTRASOUND MECHANICAL SCAN PSEUDO_CODE:
+
+
+% Your function should accept the following inputs:
+%
+%  overall length to be scanned
+%  space between ultrasound reading points
+%  integer for number of reps at a reading point
+%
+% It should returns at least two variables:
+%
+% 1) time axis (OPTIONAL -- can calculate time if sampling rate is known
+% 2) data from each collection (stored as a column in a matrix)
+%
+% Each column in ths matrix (#2 above) will correspond to a lateral position
+%
+% It will use GPIB(USB) communication and serial communication for the
+% oscilloscope and stepper motor, respectively, through communication with 4
+% additional functions, which must be in the MATLAB path.
+% 
+ 
+% Written by:
+% Date: 
+ 
+%----------------------------------------------------
+% define basic variables:
+% cm per motor step, which you should do an experiment to determine
+ 
+% set channel on the oscilloscope where data should be collected
+CH=1;  % for example
+ 
+% set loop variables
+
+% set a global variables to keep track of having initialized the motor and
+% oscilloscope on this MATLAB session and to remember the values for the port % definitions
+ 
+global init
+global port_vars
+ 
+%-------------------------------------------
+% initialize the scope and motor controller only if not done already in this
+% MATLAB session
+ 
+if init == 1
+    disp('Setting g and s...')
+    pause(1)
+    g = port_vars(1);
+    s = port_vars(2);
+else
+    %initialize oscilloscope
+    disp('Starting to initialize the scope and motor...')
+    pause(1)
+    [g] = oscil_init;
+    [s] = motor_init;
+    if success == 1  % ***IF YOU WANT TO USE THIS YOU NEED TO THINK ABOUT ADDING SOMEHTING TO YOUR SUB_FUNCTIONS, OTHERWISE REMOVE THE IF STATEMENTS***
+        init = 1;
+    end
+    port_vars = [g,s];
+    
+end
+ 
+% ----------------------------------------------
+%check to see if step size results in an integer number of steps for the
+%length provided
+
+% One quick way to check if something is an integer in MATLAB
+% is_integer = X - round(X);
+% is_integer = is_integer + Y - round(Y);
+ 
+ 
+%-------------------------------------------
+% BEGIN COLLECTING DATA
+ 
+% only execute IF steps and motor steps are integers
+  
+    % Make a matrix for the data to be inserted into
+    % do one test collection
+    % and measure length of data
+    % make matrix for final output
+
+    % make a vector for holding data during a single collection (OPTIONAL)
+    
+    
+% notify the user of repetition number
+         % gather data at "zero" point
+ 
+% store holding vector data in matrix
+
+% reset holding vector
+
+        % for each step: move, then collect ultrasound data
+            
+            % move the motor the specified number of steps
+            % pause to let the motor move: should calculate the time required
+            % gather the ultrasound data from oscilloscope
+            
+            % store holding vector data in matrix
+            
+            % reset holding vector
+            
+            
+       
+            
+            
+    % move motor back to starting position
+    % calc the total steps traveled in one rep, make it negative so the motor moves backwards
+    
+% pause to let the motor move, need to calculate how long
+    
+ 
+
+
+
+SUB_FUNCTIONS (SUGGESTED):
+
+motor_init
+% For information on writing to the serial port, refer to your lab handout.
+move_motor_func
+% The specific commands for the Velmex controller is in your lab handout.
+oscil_init
+
+% This function initializes communication to a Tektronics Oscilloscope using
+% an NI GPIB to USB adapter card
+% 
+
+GPIB = 1; % set the address for the GPIB (may be different #; need to check)
+board = 0; % set the board index
+
+% open information about communication with the oscilloscope
+% and check to see if g has been set to the GPIB port
+g = instrfind('type', 'gpib', 'BoardIndex', board, 'PrimaryAddress', GPIB, 'Tag', '');
+ 
+if isempty(g)  % if communication is not open, open it
+    g=gpib('NI',board,GPIB);  
+else
+    fclose(g);
+    g = g(1);
+end
+
+%------------------------------------------
+fclose(g);  % InputBufferSize cannot be set while OBJ is open.
+ 
+set(g,'InputBufferSize',8*50001);
+set(g,'Timeout',10);  % Sets device timeout to 10 seconds
+ 
+
+get_oscil_data
+
+fopen(g); % reopen
+ 
+%------------------------------------------
+% Gather information about the oscilloscope
+% NOTE: You may not need all of this information.  However, it can be used
+%       to return the sampling rate (i.e. time per division), if wanted.
+
+% One important thing to be aware of when writing to the scope (and when
+% writing to the serial port for the motor controller in the previous
+% section) is that all commands and returned data will be in character
+% strings, not numerical data values.  That is why we need the “str2num”
+% and “num2str” commands throughout.
+
+% The following switch takes a number if given as a number makes it into a
+% string and then concatenates that with "CH" (to make function more robust)
+
+switch CHstring(1) 
+        case {1, 2}
+            CHstring=['CH' num2str(CHstring)];
+        case {'1', '2’}
+            CHstring=['CH' CHstring];
+end
+ 
+fprintf(g,['DATa:SOUrce ' CHstring]);
+fprintf(g,'DATa:ENCdg ASCII'); % Use standard ASCII encoding for data
+fprintf(g,'DATa:WIDth 2'); % '1' = 8 bit, '2' = 16 bit
+fprintf(g,'DATa:STArt 1');
+xLength=query(g,'HORizontal:RECordlength?');  % Will give total # of samples
+fprintf(g,['DATa:STOp ' xLength]);
+xLength=str2double(xLength);
+
+% Get the data
+value=str2num(query(g,'CURve?'));
+
+% NOTE: For the larger Tektronix scopes (TDS 3012C), there will be additional
+%       header characters that will need to be cropped off from your actual
+%       data.
+  
+%------------------------------------------
+% Gather information about units and scaling and apply that to the data:
+% Note that you may not end up needing all of this information
+ 
+Ymult = str2num(query(g,['WFMPre:' CHstring ':Ymult?']));
+Yoff = str2num(query(g,['WFMPre:' CHstring ':Yoff?']));
+value = (value-Yoff)*Ymult;
+
+startTime = str2num(query(g,['WFMPre:' CHstring ':XZEro?']));
+timeDiv = str2num(query(g,['WFMPre:' CHstring ':XINcr?']));
+
+fclose(g); %close port
+
