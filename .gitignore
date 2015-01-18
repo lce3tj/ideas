@@ -1,12 +1,12 @@
-ULTRASOUND MECHANICAL SCAN PSEUDO_CODE:
-
+% ULTRASOUND MECHANICAL SCAN PSEUDO_CODE:
+function [time,data] = scan(x,dX,reps)
 
 % Your function should accept the following inputs:
 %
-%  overall length to be scanned
-%  space between ultrasound reading points
-%  integer for number of reps at a reading point
-%
+%  overall length to be scanned -- x
+%  space between ultrasound reading points -- dX
+%  integer for number of reps at a reading point -- reps
+% 
 % It should returns at least two variables:
 %
 % 1) time axis (OPTIONAL -- can calculate time if sampling rate is known
@@ -115,37 +115,6 @@ SUB_FUNCTIONS (SUGGESTED):
 
 motor_init
 % For information on writing to the serial port, refer to your lab handout.
-% For information on writing to the serial port, refer to your lab handout.
-function[] = motor_init(s)
-s=serial(port); %defines a port
-%port is com1 or com3
-%check which ports are available by using tmtool
-port_status = get(s,’Status’) %tells if port is open or not
-%write if statement; if closed, open
-If Status==closed
-fopen(s); %opens a port if port is closed
-end
-fprintf(s,’<enter command string here>’)%writes a command to the serial port
-	%Relevant commands
-%C: Clear all commands from currently selected program (i.e. on the controller)
-%F: Enable online mode with echo “off” (to engage the controller and write to it only)
-%N: Null (zero) out the motor’s absolute position registers
-%SmMx: Set speed of motor (70% power), where m = motor # (1-4 – will be 1 in your case!)
-%and x = 1 to 6000 steps / sec. You should set this to 400.
-%ImMx or ImM-x: Causes motor to step incrementally in the CW (positive) or CCW
-%(negative) direction, where m = motor # (again, this should be 1 for our purposes, since you
-%only have one motor!) and x = total number of steps.
-%R = Run the currently selected program
-% Essentially every set of commands will begin with F and C, and every command should end
-with R. The commands should always be entered as a string (i.e. of characters). For instance,
-if you wanted to move the motor by 1000 steps in the positive direction at a speed of 400
-steps/second, you would write the following string (using fprintf):
-fprintf(s,’F,C,S1M400,I1M1000,R’);
-	%motors calibrated to 0.00025 cm per step
-fprintf(s,’C,F,N,S1M400,R’); %to zero the absolute location of the motor screw and define the speed
-fclose(s); % to close the port to minimize any issues that may arise once MATLAB opens the GPIB port in a different function
-end
-
 move_motor_func
 % The specific commands for the Velmex controller is in your lab handout.
 oscil_init
@@ -175,7 +144,8 @@ set(g,'InputBufferSize',8*50001);
 set(g,'Timeout',10);  % Sets device timeout to 10 seconds
  
 
-get_oscil_data
+
+function[Ymult,Yoff,value,startTime,timeDiv] = get_oscil_data(g)
 
 fopen(g); % reopen
  
@@ -196,7 +166,7 @@ fopen(g); % reopen
 switch CHstring(1) 
         case {1, 2}
             CHstring=['CH' num2str(CHstring)];
-        case {'1', '2’}
+        case {'1', '2'}
             CHstring=['CH' CHstring];
 end
  
@@ -227,4 +197,6 @@ startTime = str2num(query(g,['WFMPre:' CHstring ':XZEro?']));
 timeDiv = str2num(query(g,['WFMPre:' CHstring ':XINcr?']));
 
 fclose(g); %close port
+end
+end
 
